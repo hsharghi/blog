@@ -2,7 +2,22 @@ import Vapor
 import Crypto
 
 /// Controls basic CRUD operations on `User`s.
-final class UserController {
+final class UserController: RouteCollection {
+    
+    func boot(router: Router) throws {
+        let users = router.grouped("users")
+        
+        users.get(use: index)
+        users.get(User.parameter, use: show)
+        users.post(use: create)
+        users.patch(User.parameter, use: update)
+
+        // good way to get update paramters
+//        users.patch(UserContent.self, at: User.parameter, use: update)
+    }
+    
+    
+    
     /// Returns a list of all `Users`s.
     func all(_ req: Request) throws -> Future<[User]> {
         return User.query(on: req).all()
@@ -50,11 +65,10 @@ final class UserController {
                 let hasher = try req.make(BCryptDigest.self)
                 user.password = try hasher.hash(newValues.password!, cost: 4)
             }
-            if newValues.username != nil {
-                user.username = newValues.username!
-            }
             
-            return user.save(on: req).map { user in
+            user.username = newValues.username ?? user.username
+            
+            return user.update(on: req).map { user in
                 return User.PublicUser(id: user.id!, username: user.username, email: user.email)
             }
         })

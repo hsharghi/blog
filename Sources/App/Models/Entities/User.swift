@@ -1,8 +1,8 @@
-import FluentSQLite
+import FluentMySQL
 import Vapor
 
 /// A single entry of a Todo list.
-final class User: SQLiteModel {
+final class User: MySQLModel {
     /// The unique identifier for this `Todo`.
     var id: Int?
     
@@ -23,12 +23,14 @@ final class User: SQLiteModel {
 /// Allows `Todo` to be used as a dynamic migration.
 extension User: Migration {
     //optional method if want more control over migration process
-    internal static func prepare(on connection: SQLiteConnection) -> Future<Void> {
-        return SQLiteDatabase.create(self, on: connection) { builder in
-            try builder.field(type: Int.sqliteFieldType, for: \.id, isIdentifier: true)
-            try builder.field(for: \.email)
-            try builder.field(for: \.email)
-            try builder.field(for: \.password)
+    internal static func prepare(on connection: MySQLConnection) -> Future<Void> {
+        return MySQLDatabase.create(self, on: connection) { builder in
+            try addProperties(to: builder)
+//
+//            try builder.field(type: Int.mySQLColumnDefinition, for: \.id, isIdentifier: true)
+//            try builder.field(for: \.username)
+//            try builder.field(for: \.email)
+//            try builder.field(for: \.password)
 //            builder.field(type: .varChar(length: 191), for: \.body)
         }
     }
