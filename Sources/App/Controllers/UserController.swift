@@ -24,20 +24,13 @@ final class UserController: RouteCollection {
     }
     
     func index(_ req: Request) throws -> Future<[User.PublicUser]> {
-        return User.query(on: req).all().map { users in
-            return try users.map({ (user) in
-                return try User.PublicUser(id: user.requireID(), username: user.username, email: user.email)
-            })
-        }
+        return User.query(on: req).all().toPublicUser()
     }
     
+
     /// Returns public properties of a `Users`.
     func show(_ req: Request) throws -> Future<User.PublicUser> {
-        let user = try req.parameters.next(User.self)
-        
-        return user.map { user in
-            return try User.PublicUser(id: user.requireID(), username: user.username, email: user.email)
-        }
+        return try req.parameters.next(User.self).toPublicUser()
     }
     
     func create(_ req: Request) throws -> Future<User.PublicUser> {
@@ -45,9 +38,7 @@ final class UserController: RouteCollection {
         let user = try req.content.syncDecode(User.self)
         let hasher = try req.make(BCryptDigest.self)
         user.password = try hasher.hash(user.password, cost: 4)
-        return user.save(on: req).map { user in
-            return User.PublicUser(id: user.id!, username: user.username, email: user.email)
-        }
+        return user.save(on: req).toPublicUser()
         
         // async decode and async save with flatMap
         //        return try req.content.decode(User.self).flatMap { user in
@@ -68,9 +59,7 @@ final class UserController: RouteCollection {
             
             user.username = newValues.username ?? user.username
             
-            return user.update(on: req).map { user in
-                return User.PublicUser(id: user.id!, username: user.username, email: user.email)
-            }
+            return user.update(on: req).toPublicUser()
         })
     }
     
