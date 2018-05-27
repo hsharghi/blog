@@ -42,7 +42,6 @@ extension User: Content { }
 /// Allows `Todo` to be used as a dynamic parameter in route definitions.
 extension User: Parameter { }
 
-
 extension User {
     struct UpdatableUser: Content {
         var username: String?
@@ -53,5 +52,30 @@ extension User {
         var id: Int
         var username: String?
         var email: String
+    }
+    
+}
+
+extension Future where T == User {
+    func toPublicUser() -> Future<User.PublicUser> {
+        return self.map({ (user) in
+            return try User.PublicUser(id: user.requireID(), username: user.username, email: user.email)
+        })
+    }
+}
+
+extension Future where T == [User] {
+    func toPublicUser() -> Future<[User.PublicUser]> {
+        return self.map { users in
+            return users.map({ (user) in
+                return user.toPublicUser()
+            })
+        }
+    }
+}
+
+extension User {
+    func toPublicUser() -> User.PublicUser {
+        return User.PublicUser(id: self.id!, username: self.username, email: self.email)
     }
 }
