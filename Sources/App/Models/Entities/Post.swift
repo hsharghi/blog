@@ -63,6 +63,10 @@ extension Post {
     var author: Parent<Post, User> {
         return parent(\.userId)
     }
+    
+    var comments: Children<Post, Comment> {
+        return children(\.postId)
+    }
 }
 
 extension Post {
@@ -71,13 +75,18 @@ extension Post {
         var body: String
     }
     
+    struct UpdatablePost: Content {
+        var title: String?
+        var body: String?
+    }
+
     struct PostList: Content {
         var id: Int
         var title : String
         var body: String
-        var author: User?
+        var author: User.PublicUser?
         
-        init(id: Int, title: String, body: String, author: User? = nil) {
+        init(id: Int, title: String, body: String, author: User.PublicUser? = nil) {
             self.id = id
             self.title = title
             self.body = body

@@ -11,8 +11,10 @@ public func routes(_ router: Router) throws {
     try router.register(collection: PostController())
 
     // Example of configuring a controller
-//    let todoController = TodoController()
-//    router.get("todos", use: todoController.index)
-//    router.post("todos", use: todoController.create)
-//    router.delete("todos", Todo.parameter, use: todoController.delete)
+//    let userController = UserController()
+//    router.post("users", use: UserController.create)
+//    router.get("users", use: UserController.index)
+//    router.get("users", User.parameter, use: UserController.show)
+//    router.patch("users", use: UserController.update)
+//    router.delete("users", User.parameter, use: UserController.delete)
 }

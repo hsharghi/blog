@@ -1,5 +1,6 @@
 import FluentMySQL
 import Vapor
+import Authentication
 
 /// A single entry of a Todo list.
 final class User: MySQLModel {
@@ -42,6 +43,17 @@ extension User: Content { }
 /// Allows `Todo` to be used as a dynamic parameter in route definitions.
 extension User: Parameter { }
 
+extension User {
+    var posts: Children<User, Post> {
+        return children(\.userId)
+    }
+    
+    var comments: Children<User, Comment> {
+        return children(\.userId)
+    }
+    
+}
+
 
 extension User {
     struct UpdatableUser: Content {
@@ -55,3 +67,10 @@ extension User {
         var email: String
     }
 }
+
+extension User: BasicAuthenticatable {
+    static let usernameKey: WritableKeyPath<User, String> = \.email
+    static let passwordKey: WritableKeyPath<User, String> = \.password
+}
+
+

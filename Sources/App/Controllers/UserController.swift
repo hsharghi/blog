@@ -11,7 +11,8 @@ final class UserController: RouteCollection {
         users.get(User.parameter, use: show)
         users.post(use: create)
         users.patch(User.parameter, use: update)
-
+        users.delete(User.parameter, use: delete)
+    
         // good way to get update paramters
 //        users.patch(UserContent.self, at: User.parameter, use: update)
     }
@@ -77,11 +78,20 @@ final class UserController: RouteCollection {
     
     /// Deletes a parameterized `User`
     func delete(_ req: Request) throws -> Future<HTTPStatus> {
+        
+        
         return try req.parameters.next(User.self).flatMap { user in
             return user.delete(on: req)
+            }.catch { (error) in
+                print("ridim")
+//                throw VendingMachineError.insufficientFunds(reason: error.localizedDescription )
             }.transform(to: .ok)
     }
 }
 
-
+enum VendingMachineError: Error {
+    case invalidSelection
+    case insufficientFunds(reason: String)
+    case outOfStock
+}
 
