@@ -24,10 +24,10 @@ final class Comment: MySQLModel {
     init(id: Int? = nil, postId: Post.ID, userId: User.ID, body: String) {
         self.id = id
         self.body = body
-        self.createdAt = Date()
-        self.updatedAt = Date()
         self.userId = userId
         self.postId = postId
+        self.createdAt = Date()
+        self.updatedAt = Date()
     }
 }
 
@@ -79,6 +79,8 @@ extension Comment: Pivot {
     
     typealias Right = Post
 }
+
+
 extension Comment {
     struct CreateComment: Content {
         var body: String
@@ -92,11 +94,11 @@ extension Comment {
         var id: Int
         var body: String
         var commentator: User.PublicUser?
-        var post: Post?
+        var onPost: Post?
 
-        init(id: Int, body: String, post: Post? = nil, commentator: User.PublicUser? = nil) {
+        init(id: Int, body: String, onPost: Post? = nil, commentator: User.PublicUser? = nil) {
             self.id = id
-            self.post = post
+            self.onPost = onPost
             self.body = body
             self.commentator = commentator
         }
