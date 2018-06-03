@@ -36,16 +36,37 @@ extension User: Migration {
     }
 }
 
-/// Allows `Todo` to be encoded to and decoded from HTTP messages.
+/// Allows `User` to be encoded to and decoded from HTTP messages.
 extension User: Content { }
 
-/// Allows `Todo` to be used as a dynamic parameter in route definitions.
+/// Allows `User` to be used as a dynamic parameter in route definitions.
 extension User: Parameter { }
+
+/// Allow authenticate for User model
+extension User: PasswordAuthenticatable {
+    static var usernameKey: WritableKeyPath<User, String> { return \User.email }
+    static var passwordKey: WritableKeyPath<User, String> { return \User.password }
+}
+
+extension User: TokenAuthenticatable {
+    typealias TokenType = Token
+}
+
+
 
 extension User {
     struct UpdatableUser: Content {
         var username: String?
         var password: String?
+    }
+    
+    struct AuthenticatableUser: Content {
+        var email: String
+        var password: String
+    }
+    
+    struct AuthenticatedUser {
+        var token: String
     }
     
     struct PublicUser: Content {        
