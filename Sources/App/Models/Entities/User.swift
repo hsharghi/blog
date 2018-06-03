@@ -37,21 +37,32 @@ extension User: Migration {
     }
 }
 
-/// Allows `Todo` to be encoded to and decoded from HTTP messages.
+/// Allows `User` to be encoded to and decoded from HTTP messages.
 extension User: Content { }
 
-/// Allows `Todo` to be used as a dynamic parameter in route definitions.
+/// Allows `User` to be used as a dynamic parameter in route definitions.
 extension User: Parameter { }
+
+/// Allow authenticate for User model
+extension User: PasswordAuthenticatable {
+    static var usernameKey: WritableKeyPath<User, String> { return \User.email }
+    static var passwordKey: WritableKeyPath<User, String> { return \User.password }
+}
+//
+//extension User: TokenAuthenticatable {
+//    typealias TokenType = Token
+//}
+
 
 extension User {
     var posts: Children<User, Post> {
         return children(\.userId)
     }
-    
+
     var comments: Children<User, Comment> {
         return children(\.userId)
     }
-    
+
 }
 
 
@@ -61,16 +72,45 @@ extension User {
         var password: String?
     }
     
-    struct PublicUser: Content {        
+    struct AuthenticatableUser: Content {
+        var email: String
+        var password: String
+    }
+
+    struct AuthenticatedUser {
+        var token: String
+    }
+
+    struct PublicUser: Content {
         var id: Int
         var username: String?
         var email: String
     }
+
 }
 
-extension User: BasicAuthenticatable {
-    static let usernameKey: WritableKeyPath<User, String> = \.email
-    static let passwordKey: WritableKeyPath<User, String> = \.password
+extension Future where T == User {
+    func toPublicUser() -> Future<User.PublicUser> {
+        return self.map { user in
+            return try User.PublicUser(id: user.requireID(), username: user.username, email: user.email)
+        }
+    }
+}
+
+extension Future where T == [User] {
+    func toPublicUsers() -> Future<[User.PublicUser]> {
+        return self.map { users in
+            return users.map({ (user) in
+                return user.toPublicUser()
+            })
+        }
+    }
+}
+
+extension User {
+    func toPublicUser() -> User.PublicUser {
+        return User.PublicUser(id: self.id!, username: self.username, email: self.email)
+    }
 }
 
 

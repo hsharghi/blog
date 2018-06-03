@@ -33,8 +33,7 @@ final class PostController: RouteCollection {
         return try Post.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Post.PostList].self) { posts -> Future<[Post.PostList]> in    //2
             return try posts.map{ post -> Future<Post.PostList> in    //3
                 return try post.author.get(on: req).map(to: Post.PostList.self) { author -> Post.PostList in    //4
-                    let publicUser = User.PublicUser(id: author.id!, username: author.username, email: author.email)
-                    return try Post.PostList(id: post.requireID(), title: post.title, body: post.body, author: publicUser)        //5
+                    return try Post.PostList(id: post.requireID(), title: post.title, body: post.body, author: author.toPublicUser())        //5
                 }
                 }.flatten(on: req)    //6
         }
@@ -63,11 +62,7 @@ final class PostController: RouteCollection {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
-            throw AuthError(
-                identifier: "userNotGot",
-                reason: "Couldn't get the authenticated user!",
-                source: .capture()
-            )
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
         let postData = try req.content.syncDecode(Post.CreatePost.self)
         //        repeat {
@@ -84,20 +79,12 @@ final class PostController: RouteCollection {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
-            throw AuthError(
-                identifier: "userNotGot",
-                reason: "Couldn't get the authenticated user!",
-                source: .capture()
-            )
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
         
         let post = try req.parameters.next(Post.self).map { post throws -> Post in
             guard post.userId == userId else {
-                throw AuthError(
-                    identifier: "notYourPost",
-                    reason: "The post you are trying to update, is not yours!",
-                    source: .capture()
-                )
+                throw Abort(.forbidden, reason: "The post you are trying to update, is not yours!")
             }
             return post
         }
@@ -118,60 +105,18 @@ final class PostController: RouteCollection {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
-            throw AuthError(
-                identifier: "userNotGot",
-                reason: "Couldn't get the authenticated user!",
-                source: .capture()
-            )
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
         
         return try req.parameters.next(Post.self).flatMap { post throws -> Future<HTTPStatus> in
             guard post.userId == userId else {
-                throw AuthError(
-                    identifier: "notYourPost",
-                    reason: "The post you are trying to delete, is not yours!",
-                    source: .capture()
-                )
+                throw Abort(.forbidden, reason: "The post you are trying to delete, is not yours!")
             }
             return post.delete(on: req).transform(to: HTTPStatus.ok)
         }
     }
     
 }
-
-
-struct AuthError: Debuggable {
-    /// See Debuggable.readableName
-    public static let readableName = "Can't get User"
-    
-    /// See Debuggable.reason
-    public let identifier: String
-    
-    /// See Debuggable.reason
-    public var reason: String
-    
-    /// See Debuggable.sourceLocation
-    public var sourceLocation: SourceLocation?
-    
-    /// See stackTrace
-    public var stackTrace: [String]
-    
-    /// Create a new authentication error.
-    init(
-        identifier: String,
-        reason: String,
-        source: SourceLocation
-        ) {
-        self.identifier = identifier
-        self.reason = reason
-        self.sourceLocation = source
-        self.stackTrace = AuthenticationError.makeStackTrace()
-    }
-}
-
-
-
-
 
 
 

@@ -15,28 +15,28 @@ final class CommentController: RouteCollection {
         let posts = guardedRoutes.grouped("comments")
         //        let posts = router.grouped("posts",[basicAuthMiddleware, guardAuthMiddleware])
         
-        posts.get(use: index)
+//        posts.get(use: index)
         posts.post(use: create)
         posts.patch(Comment.parameter, use: update)
         
         router.get("comments", Comment.parameter, use: show)
-        router.get("comments", "all", use: all)
+//        router.get("comments", "all", use: all)
         
         // good way to get update paramters
         //        posts.patch(UserContent.self, at: User.parameter, use: update)
     }
     
+//
+//    func all(_ req: Request) throws -> Future<[Comment.CommentList]> {
+//
+//    }
     
-    func all(_ req: Request) throws -> Future<[Comment.CommentList]> {
-        
-    }
-    
-    func index(_ req: Request) throws -> Future<[Post]> {
+//    func index(_ req: Request) throws -> Future<[Comment]> {
 //        let user = try req.authenticated(User.self).flatMap(to: [Comment].self) { user in
 //            return user.comments
 //        }
 //        return (try user?.posts.query(on: req).sort(\.createdAt, .descending).all())!
-    }
+//    }
     
     
     func show(_ req: Request) throws -> Future<Post.PostList> {
@@ -56,11 +56,7 @@ final class CommentController: RouteCollection {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
-            throw AuthError(
-                identifier: "userNotGot",
-                reason: "Couldn't get the authenticated user!",
-                source: .capture()
-            )
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
         let postData = try req.content.syncDecode(Post.CreatePost.self)
         //        repeat {
@@ -77,20 +73,13 @@ final class CommentController: RouteCollection {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
-            throw AuthError(
-                identifier: "userNotGot",
-                reason: "Couldn't get the authenticated user!",
-                source: .capture()
-            )
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
+
         }
         
         let post = try req.parameters.next(Post.self).map { post throws -> Post in
             guard post.userId == userId else {
-                throw AuthError(
-                    identifier: "notYourPost",
-                    reason: "The post you are trying to update, is not yours!",
-                    source: .capture()
-                )
+                throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
             }
             return post
         }
@@ -111,20 +100,14 @@ final class CommentController: RouteCollection {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
-            throw AuthError(
-                identifier: "userNotGot",
-                reason: "Couldn't get the authenticated user!",
-                source: .capture()
-            )
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
+
         }
         
         return try req.parameters.next(Post.self).flatMap { post throws -> Future<HTTPStatus> in
             guard post.userId == userId else {
-                throw AuthError(
-                    identifier: "notYourPost",
-                    reason: "The post you are trying to delete, is not yours!",
-                    source: .capture()
-                )
+                throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
+
             }
             return post.delete(on: req).transform(to: HTTPStatus.ok)
         }
