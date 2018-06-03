@@ -7,6 +7,7 @@
 
 import Vapor
 import FluentMySQL
+import Authentication
 
 final class Token: MySQLModel {
     var id: Int?

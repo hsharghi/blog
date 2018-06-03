@@ -48,10 +48,10 @@ extension User: PasswordAuthenticatable {
     static var usernameKey: WritableKeyPath<User, String> { return \User.email }
     static var passwordKey: WritableKeyPath<User, String> { return \User.password }
 }
-//
-//extension User: TokenAuthenticatable {
-//    typealias TokenType = Token
-//}
+
+extension User: TokenAuthenticatable {
+    typealias TokenType = Token
+}
 
 
 extension User {
