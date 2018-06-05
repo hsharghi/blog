@@ -2,30 +2,6 @@ import Vapor
 import Crypto
 import Fakery
 
-extension Collection where Index == Int {
-    
-    /**
-     Picks a random element of the collection.
-     
-     - returns: A random element of the collection.
-     */
-    private func random(max: UInt32) -> Int {
-        #if os(Linux)
-        seedRandom()
-        return Int((random() % max))
-        #else
-        return Int(arc4random_uniform(UInt32(max)))
-        #endif
-    }
-    
-    func randomElement() -> Iterator.Element? {
-        let index = random(max: UInt32(endIndex))
-        return isEmpty ? nil : self[index]
-    }
-    
-}
-
-
 /// Controls basic CRUD operations on `User`s.
 final class SeederController: RouteCollection {
     
