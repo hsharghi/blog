@@ -1,6 +1,7 @@
 import FluentMySQL
 import Vapor
 import Authentication
+import JWTAuthenticatable
 
 /// A single entry of a Todo list.
 final class User: MySQLModel {
@@ -49,6 +50,7 @@ extension User: PasswordAuthenticatable {
     static var passwordKey: WritableKeyPath<User, String> { return \User.password }
 }
 
+
 extension User: TokenAuthenticatable {
     typealias TokenType = Token
 }
@@ -77,7 +79,7 @@ extension User {
         var password: String
     }
 
-    struct AuthenticatedUser {
+    struct AuthenticatedUser: Content {
         var token: String
     }
 
@@ -86,13 +88,22 @@ extension User {
         var username: String?
         var email: String
     }
-
+    
 }
 
 extension Future where T == User {
     func toPublicUser() -> Future<User.PublicUser> {
         return self.map { user in
             return try User.PublicUser(id: user.requireID(), username: user.username, email: user.email)
+        }
+    }
+
+    func toAuthenticatedUser(on conn: DatabaseConnectable) -> Future<User.AuthenticatedUser> {
+        return self.flatMap(to: User.AuthenticatedUser.self) { createdUser in
+            let accessToken = try Token.createToken(forUser: createdUser)
+            return accessToken.save(on: conn).map(to: User.AuthenticatedUser.self) { createdToken in
+                return User.AuthenticatedUser(token: createdToken.token)
+            }
         }
     }
 }
