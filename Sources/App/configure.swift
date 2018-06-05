@@ -2,6 +2,7 @@
 import FluentMySQL
 import Vapor
 import Authentication
+import JWTMiddleware
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
@@ -42,6 +43,10 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     var migrations = MigrationConfig()
     migrations.add(model: User.self, database: .mysql)
     migrations.add(model: Post.self, database: .mysql)
+    migrations.add(model: Comment.self, database: .mysql)
+    migrations.add(model: Token.self, database: .mysql)
+    
     services.register(migrations)
 
+    
 }
