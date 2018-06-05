@@ -4,6 +4,8 @@ import Vapor
 /// A single entry of a Todo list.
 final class Comment: MySQLModel {
 
+    static var entity = "comments"
+    
     var id: Int?
     var userId: User.ID
     var postId: Post.ID
@@ -52,7 +54,9 @@ extension Comment: Content { }
 /// Allows `Comment` to be used as a dynamic parameter in route definitions.
 extension Comment: Parameter { }
 
-extension Comment: Timestampable { }
+extension Comment: Timestampable {
+    
+}
 
 extension Comment {
     var commentator: Parent<Comment, User> {
@@ -89,18 +93,20 @@ extension Comment {
     struct UpdatableComment: Content {
         var body: String?
     }
-
+    
     struct CommentList: Content {
         var id: Int
         var body: String
         var commentator: User.PublicUser?
         var onPost: Post?
-
-        init(id: Int, body: String, onPost: Post? = nil, commentator: User.PublicUser? = nil) {
+        var date: Date
+        
+        init(id: Int, body: String, onPost: Post? = nil, commentator: User.PublicUser? = nil, date: Date) {
             self.id = id
             self.onPost = onPost
             self.body = body
             self.commentator = commentator
+            self.date = date
         }
     }
 }
