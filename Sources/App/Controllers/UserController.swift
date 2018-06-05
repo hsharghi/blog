@@ -1,6 +1,7 @@
 import Vapor
 import Crypto
 import Authentication
+import JWTMiddleware
 
 /// Controls basic CRUD operations on `User`s.
 final class UserController: RouteCollection {
@@ -35,28 +36,22 @@ final class UserController: RouteCollection {
         return User.query(on: req).all().toPublicUsers()
     }
 
-
     /// Returns public properties of a `Users`.
     func show(_ req: Request) throws -> Future<User.PublicUser> {
         return try req.parameters.next(User.self).toPublicUser()
     }
 
-    func create(_ req: Request) throws -> Future<User.PublicUser> {
+    func create(_ req: Request) throws -> Future<User.AuthenticatedUser> {
         // sync decode and async save
         let user = try req.content.syncDecode(User.self)
-        return try User.query(on: req).filter(\.email == user.email).first().flatMap(to: User.PublicUser.self) { existingUser in
+        return try User.query(on: req).filter(\.email == user.email).first().flatMap(to: User.AuthenticatedUser.self) { existingUser in
             guard existingUser == nil else {
                 throw Abort(.badRequest, reason: "User with this email address already exists")
             }
             let hasher = try req.make(BCryptDigest.self)
             user.password = try hasher.hash(user.password, cost: 4)
-            return user.save(on: req).toPublicUser()
+            return user.save(on: req).toAuthenticatedUser(on: req)
         }
-
-        // async decode and async save with flatMap
-        //        return try req.content.decode(User.self).flatMap { user in
-        //            return user.save(on: req)
-        //        }
     }
 
     func update(_ req: Request) throws -> Future<User.PublicUser> {
@@ -85,7 +80,6 @@ final class UserController: RouteCollection {
             return user.delete(on: req)
         }.catch { (error) in
             print("ridim")
-//                throw VendingMachineError.insufficientFunds(reason: error.localizedDescription )
         }.transform(to: .ok)
     }
 }
