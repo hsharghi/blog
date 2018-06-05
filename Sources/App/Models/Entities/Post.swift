@@ -21,11 +21,11 @@ final class Post: MySQLModel {
     
 
     /// Creates a new `Post`.
-    init(id: Int? = nil, title: String, body: String, userId: User.ID) {
+    init(id: Int? = nil, title: String, body: String, userId: User.ID, createdAt: Date = Date()) {
         self.id = id
         self.title = title
         self.body = body
-        self.createdAt = Date()
+        self.createdAt = createdAt
         self.updatedAt = Date()
         self.userId = userId
     }
