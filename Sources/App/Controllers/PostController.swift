@@ -1,7 +1,6 @@
 import Vapor
 import Crypto
 import Authentication
-import Debugging
 
 /// Controls basic CRUD operations on `User`s.
 final class PostController: RouteCollection {
@@ -9,10 +8,11 @@ final class PostController: RouteCollection {
     func boot(router: Router) throws {
         
         let basicAuthMiddleware = User.basicAuthMiddleware(using: BCrypt)
+        let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let guardAuthMiddleware = User.guardAuthMiddleware()
         //        let basicAuthGroup = router.grouped([basicAuthMiddleware, guardAuthMiddleware])
         
-        let guardedRoutes = router.grouped([basicAuthMiddleware, guardAuthMiddleware])
+        let guardedRoutes = router.grouped([tokenAuthMiddleware, guardAuthMiddleware])
         let posts = guardedRoutes.grouped("posts")
         //        let posts = router.grouped("posts",[basicAuthMiddleware, guardAuthMiddleware])
         
