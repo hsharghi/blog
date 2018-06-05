@@ -12,45 +12,47 @@ final class CommentController: RouteCollection {
         let guardAuthMiddleware = User.guardAuthMiddleware()
         
         let guardedRoutes = router.grouped([basicAuthMiddleware, guardAuthMiddleware])
-        let posts = guardedRoutes.grouped("comments")
-        //        let posts = router.grouped("posts",[basicAuthMiddleware, guardAuthMiddleware])
+        let comments = guardedRoutes.grouped("comments")
         
-//        posts.get(use: index)
-        posts.post(use: create)
-        posts.patch(Comment.parameter, use: update)
-        
-        router.get("comments", Comment.parameter, use: show)
-//        router.get("comments", "all", use: all)
-        
-        // good way to get update paramters
-        //        posts.patch(UserContent.self, at: User.parameter, use: update)
+        comments.get("my", use: getMyComments)
+        comments.post(use: create)
+        comments.patch(Comment.parameter, use: update)
+        comments.delete(Comment.parameter, use: delete)
+
+        router.get("comments", "post", Post.parameter, use: getCommentsOnPost)
     }
     
-//
-//    func all(_ req: Request) throws -> Future<[Comment.CommentList]> {
-//
-//    }
+    func getMyComments(_ req: Request) throws -> Future<[Comment.CommentList]> {
+        let user = try req.authenticated(User.self)
+        guard user != nil else {
+            throw Abort(.unauthorized, reason: "You need to login to see comments")
+        }
+        let theUser = user!
+        
+        return try theUser.comments.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Comment.CommentList].self) { comments -> Future<[Comment.CommentList]> in
+            return try comments.map { comment -> Future<Comment.CommentList> in
+                return try comment.post.get(on: req).map(to: Comment.CommentList.self) { post -> Comment.CommentList in
+                    return try Comment.CommentList(id: comment.requireID(), body: comment.body, onPost: post, commentator: theUser.toPublicUser(), date: comment.createdAt ?? Date())
+                }
+                }.flatten(on: req)
+        }
+    }
     
-//    func index(_ req: Request) throws -> Future<[Comment]> {
-//        let user = try req.authenticated(User.self).flatMap(to: [Comment].self) { user in
-//            return user.comments
-//        }
-//        return (try user?.posts.query(on: req).sort(\.createdAt, .descending).all())!
-//    }
     
-    
-    func show(_ req: Request) throws -> Future<Post.PostList> {
-        return try req.parameters.next(Post.self).flatMap(to: Post.PostList.self) { post -> Future<Post.PostList> in
-            return try post.author.get(on: req).map{ author -> Post.PostList in
-                let publicUser = User.PublicUser(id: author.id!, username: author.username, email: author.email)
-                return Post.PostList(id: post.id!, title: post.title, body: post.body, author: publicUser)
+    func getCommentsOnPost(_ req: Request) throws -> Future<[Comment.CommentList]> {
+        return try req.parameters.next(Post.self).flatMap(to: [Comment.CommentList].self) { post -> Future<[Comment.CommentList]> in
+            return try post.comments.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Comment.CommentList].self) { comments -> Future<[Comment.CommentList]> in
+                return try comments.map { comment -> Future<Comment.CommentList> in
+                    return try comment.commentator.get(on: req).map(to: Comment.CommentList.self) { commentator -> Comment.CommentList in
+                        return try Comment.CommentList(id: comment.requireID(), body: comment.body, commentator: commentator.toPublicUser(), date: comment.createdAt ?? Date())
+                    }
+                    }.flatten(on: req)
             }
         }
     }
     
     
-    
-    func create(_ req: Request) throws -> Future<Post> {
+    func create(_ req: Request) throws -> Future<Comment> {
         // sync decode and async save
         
         let user = try req.authenticated(User.self)
@@ -58,18 +60,27 @@ final class CommentController: RouteCollection {
         guard userId != nil else {
             throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
-        let postData = try req.content.syncDecode(Post.CreatePost.self)
-        //        repeat {
-        //            userId = Int(arc4random_uniform(5))
-        //        } while userId == 0
-        let post = Post(title: postData.title, body: postData.body, userId: userId!)
+        let commentData = try req.content.syncDecode(Comment.CreateComment.self)
         
-        return post.save(on: req)
+        return req.content[Int.self, at: "postId"].flatMap(to: Comment.self) { postId  in
+            guard postId != nil else {
+                throw Abort(.badRequest, reason: "`postId` is required")
+            }
+
+            return try Post.find(postId!, on: req).flatMap(to: Comment.self) { post in
+                guard post != nil else {
+                    throw Abort(.badRequest, reason: "The post you are trying to put a comment on, is not found!")
+                }
+
+                let comment = Comment(postId: postId!, userId: userId!, body: commentData.body)
+                return comment.save(on: req)
+            }
+        }
         
     }
     
     
-    func update(_ req: Request) throws -> Future<Post> {
+    func update(_ req: Request) throws -> Future<Comment> {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
@@ -77,20 +88,19 @@ final class CommentController: RouteCollection {
 
         }
         
-        let post = try req.parameters.next(Post.self).map { post throws -> Post in
-            guard post.userId == userId else {
-                throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
+        let comment = try req.parameters.next(Comment.self).map { comment throws -> Comment in
+            guard comment.userId == userId else {
+                throw Abort(.forbidden, reason: "The comment you are trying to update, is not yours!")
             }
-            return post
+            return comment
         }
         
-        let newValues = try req.content.decode(Post.UpdatablePost.self)
+        let newValues = try req.content.decode(Comment.UpdatableComment.self)
         
-        return flatMap(to: Post.self, post, newValues, { (post, newValues) in
-            post.title = newValues.title ?? post.title
-            post.body = newValues.body ?? post.body
+        return flatMap(to: Comment.self, comment, newValues, { (comment, newValues) in
+            comment.body = newValues.body ?? comment.body
             
-            return post.update(on: req)
+            return comment.update(on: req)
         })
     }
     
@@ -104,12 +114,11 @@ final class CommentController: RouteCollection {
 
         }
         
-        return try req.parameters.next(Post.self).flatMap { post throws -> Future<HTTPStatus> in
-            guard post.userId == userId else {
-                throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
-
+        return try req.parameters.next(Comment.self).flatMap { comment throws -> Future<HTTPStatus> in
+            guard comment.userId == userId else {
+                throw Abort(.forbidden, reason: "The comment you are trying to delete, is not yours!")
             }
-            return post.delete(on: req).transform(to: HTTPStatus.ok)
+            return comment.delete(on: req).transform(to: HTTPStatus.ok)
         }
     }
     
