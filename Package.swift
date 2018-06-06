@@ -13,11 +13,12 @@ let package = Package(
         .package(url: "https://github.com/vapor/auth.git", from: "2.0.0-rc.4.1"),
         .package(url: "https://github.com/vapor/jwt.git", from: "3.0.0-rc.2.1"),
         .package(url: "https://github.com/skelpo/JWTMiddleware.git", from: "0.7.0"),
-        .package(url: "https://github.com/hsharghi/Fakery.git", from: "3.4.1")
+        .package(url: "https://github.com/hsharghi/Fakery.git", from: "3.4.1"),
+        .package(url: "https://github.com/nodes-vapor/submissions.git", from: "1.0.0-beta")
     ],
     targets: [
         //            .target(name: "App", dependencies: ["FluentSQLite", "Vapor"]),
-        .target(name: "App", dependencies: ["FluentMySQL", "Vapor", "Authentication", "JWT", "JWTMiddleware", "Fakery"]),
+        .target(name: "App", dependencies: ["FluentMySQL", "Vapor", "Authentication", "JWT", "JWTMiddleware", "Fakery", "Submissions"]),
         .target(name: "Run", dependencies: ["App"]),
         .testTarget(name: "AppTests", dependencies: ["App"])
     ]

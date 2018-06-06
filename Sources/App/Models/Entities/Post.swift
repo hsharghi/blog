@@ -1,5 +1,6 @@
 import FluentMySQL
 import Vapor
+import Submissions
 
 /// A single entry of a Todo list.
 final class Post: MySQLModel {
@@ -65,6 +66,45 @@ extension Post: Content { }
 extension Post: Parameter { }
 
 extension Post: Timestampable { }
+
+extension Post: Submittable {
+    convenience init(_ create: Post.Create) throws {
+        self.init(id: nil, title: create.title, body: create.body, userId: create.userId)
+    }
+    
+    func update(_ update: Post.Submission) throws {
+        self.title = update.title ?? self.title
+        self.body = update.body ?? self.body
+    }
+    
+    
+    struct Submission: SubmissionType {
+        let title: String?
+        let body: String?
+//        let userId: User.ID?
+    }
+    
+    struct Create: Decodable {
+        let title: String
+        let body: String
+        let userId: User.ID
+    }
+}
+
+extension Post.Submission {
+    func fieldEntries() throws -> [FieldEntry<Post>] {
+        return try [
+            makeFieldEntry(keyPath: \.title, label: "Title", validators: [.count(5...)], isRequired: true),
+            makeFieldEntry(keyPath: \.body, label: "Body", validators: [.count(10...)], isRequired: true),
+        ]
+    }
+    
+    init(_ post: Post?) {
+        title = post?.title
+        body = post?.body
+    }
+}
+
 
 extension Post {
     var author: Parent<Post, User> {

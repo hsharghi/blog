@@ -1,13 +1,14 @@
 import Vapor
 import Crypto
 import Authentication
+import Submissions
 
 /// Controls basic CRUD operations on `User`s.
 final class PostController: RouteCollection {
     
     func boot(router: Router) throws {
         
-        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCrypt)
+//        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCrypt)
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let guardAuthMiddleware = User.guardAuthMiddleware()
         //        let basicAuthGroup = router.grouped([basicAuthMiddleware, guardAuthMiddleware])
@@ -18,6 +19,7 @@ final class PostController: RouteCollection {
         
         posts.get(use: index)
         posts.post(use: create)
+        posts.post("new", use: create2)
         posts.patch(Post.parameter, use: update)
         
         router.get("posts", Post.parameter, use: show)
@@ -54,6 +56,30 @@ final class PostController: RouteCollection {
         }
     }
     
+    
+    
+    func create2(_ req: Request) throws -> Future<Either<Post, SubmissionValidationError>> {
+        // sync decode and async save
+        
+        let user = try req.authenticated(User.self)
+        let userId = user?.id
+        guard userId != nil else {
+            throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
+        }
+        return try req.content.decode(Post.Submission.self)
+            .createValid(on: req)
+            .save(on: req)
+            .promoteErrors()
+//
+//        let postData = try req.content.syncDecode(Post.CreatePost.self)
+//        //        repeat {
+//        //            userId = Int(arc4random_uniform(5))
+//        //        } while userId == 0
+//        let post = Post(title: postData.title, body: postData.body, userId: userId!)
+//
+//        return post.save(on: req)
+        
+    }
     
     
     func create(_ req: Request) throws -> Future<Post> {
