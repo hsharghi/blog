@@ -29,6 +29,13 @@ final class Post: MySQLModel {
         self.updatedAt = Date()
         self.userId = userId
     }
+    /*
+    func willCreate(on connection: MySQLConnection) throws -> EventLoopFuture<Post> {
+         self.title = "***changed title***"
+        return connection.future(self.self)
+
+    }
+ */
 }
 
 /// Allows `Post` to be used as a dynamic migration.
