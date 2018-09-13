@@ -1,7 +1,6 @@
 import Vapor
 import Crypto
 import Authentication
-import JWTMiddleware
 
 /// Controls basic CRUD operations on `User`s.
 final class UserController: RouteCollection {

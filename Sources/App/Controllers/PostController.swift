@@ -1,13 +1,16 @@
 import Vapor
 import Crypto
 import Authentication
+import Pagination
+import FluentSQL
+
 
 /// Controls basic CRUD operations on `User`s.
 final class PostController: RouteCollection {
     
     func boot(router: Router) throws {
         
-        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCrypt)
+//        let basicAuthMiddleware = User.basicAuthMiddleware(using: BCrypt)
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let guardAuthMiddleware = User.guardAuthMiddleware()
         //        let basicAuthGroup = router.grouped([basicAuthMiddleware, guardAuthMiddleware])
@@ -22,26 +25,72 @@ final class PostController: RouteCollection {
         
         router.get("posts", Post.parameter, use: show)
         router.get("posts", "all", use: all)
-        
+        router.get("posts", "paginated", use: paginatedPosts)
+        router.get("postcomments", use: getPostsWithComments)
+
         // good way to get update paramters
         //        posts.patch(UserContent.self, at: User.parameter, use: update)
     }
     
+    func paginatedPosts(_ req: Request) throws -> Future<Paginated<Post>> {
+        return try Post.query(on: req).paginate(for: req)
+    }
     
-    func all(_ req: Request) throws -> Future<[Post.PostList]> {
-        
-        return try Post.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Post.PostList].self) { posts -> Future<[Post.PostList]> in    //2
-            return try posts.map{ post -> Future<Post.PostList> in    //3
-                return try post.author.get(on: req).map(to: Post.PostList.self) { author -> Post.PostList in    //4
-                    return try Post.PostList(id: post.requireID(), title: post.title, body: post.body, author: author.toPublicUser())        //5
-                }
-                }.flatten(on: req)    //6
+
+    func getPostsWithComments(_ req: Request) throws -> Future<PaginatedResponse<Post.PostWithComments>> {
+        return try Post.query(on: req).paginate(for: req).flatMap { posts -> Future<PaginatedResponse<Post.PostWithComments>> in
+            let postIds = try posts.data.map({ try $0.requireID() })
+            let authorIds = posts.data.map({ $0.userId })
+            let comments = try Comment.query(on: req).filter(\.postId ~~ postIds).all()
+            let users = try User.query(on: req).filter(\.id ~~ authorIds).all()
+            return map(to: PaginatedResponse<Post.PostWithComments>.self, comments, users, { (comments, users) -> PaginatedResponse<Post.PostWithComments> in
+                var postsWithComments: [Post.PostWithComments] = []
+                try posts.data.forEach({ (post) in
+                    let postComments = comments.filter({$0.postId == post.id})
+                    let user = users.filter({$0.id == post.userId}).first
+                    try postsWithComments.append(Post.PostWithComments(id: post.requireID(), title: post.title, body: post.body, author: user?.toPublicUser(), comments: postComments))
+                })
+                
+                return PaginatedResponse(data: postsWithComments, pageInfo: posts.page)
+            })
         }
     }
     
-    func index(_ req: Request) throws -> Future<[Post]> {
+    
+    /*
+     // with on relation (only comments)
+     
+    func getPostsWithComments(_ req: Request) throws -> Future<PaginatedResponse<Post.PostWithComments>> {
+        return try Post.query(on: req).paginate(for: req).flatMap { posts -> Future<PaginatedResponse<Post.PostWithComments>> in
+            let postIds = try posts.data.map({ try $0.requireID() })
+            return try Comment.query(on: req).filter(\.postId ~~ postIds).all().map(to: PaginatedResponse<Post.PostWithComments>.self, { comments in
+                var postsWithComments: [Post.PostWithComments] = []
+                try posts.data.forEach({ (post) in
+                    let postComments = comments.filter({$0.postId == post.id})
+                    try postsWithComments.append(Post.PostWithComments(id: post.requireID(), title: post.title, body: post.body, comments: postComments))
+                })
+                
+                return PaginatedResponse(data: postsWithComments, pageInfo: posts.page)
+            })
+        }
+    }
+    */
+
+    func all(_ req: Request) throws -> Future<[Post.PostList]> {
+        return try Post.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Post.PostList].self) { posts -> Future<[Post.PostList]> in
+            let p = try Page(number: 1, data: posts, size: 10, total: posts.count)
+            print(p)
+            return try posts.map{ post -> Future<Post.PostList> in
+                return try post.author.get(on: req).map(to: Post.PostList.self) { author -> Post.PostList in
+                    return try Post.PostList(id: post.requireID(), title: post.title, body: post.body, author: author.toPublicUser())
+                }
+            }.flatten(on: req)
+        }
+    }
+
+    func index(_ req: Request) throws -> Future<Paginated<Post>> {
         let user = try req.authenticated(User.self)
-        return (try user?.posts.query(on: req).sort(\.createdAt, .descending).all())!
+        return (try user?.posts.query(on: req).paginate(for: req))!
     }
     
     
@@ -65,9 +114,6 @@ final class PostController: RouteCollection {
             throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
         let postData = try req.content.syncDecode(Post.CreatePost.self)
-        //        repeat {
-        //            userId = Int(arc4random_uniform(5))
-        //        } while userId == 0
         let post = Post(title: postData.title, body: postData.body, userId: userId!)
         
         return post.save(on: req)
