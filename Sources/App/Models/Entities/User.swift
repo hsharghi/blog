@@ -1,7 +1,7 @@
 import FluentMySQL
 import Vapor
 import Authentication
-import JWTAuthenticatable
+//import JWTAuthenticatable
 
 /// A single entry of a Todo list.
 final class User: MySQLModel {

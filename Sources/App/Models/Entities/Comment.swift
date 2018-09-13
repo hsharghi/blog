@@ -1,5 +1,6 @@
 import FluentMySQL
 import Vapor
+import Pagination
 
 /// A single entry of a Todo list.
 final class Comment: MySQLModel {
@@ -54,9 +55,9 @@ extension Comment: Content { }
 /// Allows `Comment` to be used as a dynamic parameter in route definitions.
 extension Comment: Parameter { }
 
-extension Comment: Timestampable {
-    
-}
+extension Comment: Timestampable { }
+
+extension Comment: Paginatable { }
 
 extension Comment {
     var commentator: Parent<Comment, User> {

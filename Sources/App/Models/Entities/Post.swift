@@ -1,5 +1,6 @@
 import FluentMySQL
 import Vapor
+import Pagination
 
 /// A single entry of a Todo list.
 final class Post: MySQLModel {
@@ -66,6 +67,8 @@ extension Post: Parameter { }
 
 extension Post: Timestampable { }
 
+extension Post: Paginatable { }
+
 extension Post {
     var author: Parent<Post, User> {
         return parent(\.userId)
@@ -98,6 +101,22 @@ extension Post {
             self.title = title
             self.body = body
             self.author = author
+        }
+    }
+    
+    struct PostWithComments: Content {
+        var id: Int
+        var title : String
+        var body: String
+        var author: User.PublicUser?
+        var comments: [Comment]
+        
+        init(id: Int, title: String, body: String, author: User.PublicUser?, comments: [Comment]) {
+            self.id = id
+            self.title = title
+            self.body = body
+            self.author = author
+            self.comments = comments
         }
     }
 //
