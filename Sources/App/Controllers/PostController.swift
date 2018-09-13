@@ -41,8 +41,8 @@ final class PostController: RouteCollection {
         return try Post.query(on: req).paginate(for: req).flatMap { posts -> Future<PaginatedResponse<Post.PostWithComments>> in
             let postIds = try posts.data.map({ try $0.requireID() })
             let authorIds = posts.data.map({ $0.userId })
-            let comments = try Comment.query(on: req).filter(\.postId ~~ postIds).all()
-            let users = try User.query(on: req).filter(\.id ~~ authorIds).all()
+            let comments = Comment.query(on: req).filter(\.postId ~~ postIds).all()
+            let users = User.query(on: req).filter(\.id ~~ authorIds).all()
             return map(to: PaginatedResponse<Post.PostWithComments>.self, comments, users, { (comments, users) -> PaginatedResponse<Post.PostWithComments> in
                 var postsWithComments: [Post.PostWithComments] = []
                 try posts.data.forEach({ (post) in
@@ -77,11 +77,11 @@ final class PostController: RouteCollection {
     */
 
     func all(_ req: Request) throws -> Future<[Post.PostList]> {
-        return try Post.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Post.PostList].self) { posts -> Future<[Post.PostList]> in
+        return Post.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Post.PostList].self) { posts -> Future<[Post.PostList]> in
             let p = try Page(number: 1, data: posts, size: 10, total: posts.count)
             print(p)
-            return try posts.map{ post -> Future<Post.PostList> in
-                return try post.author.get(on: req).map(to: Post.PostList.self) { author -> Post.PostList in
+            return posts.map{ post -> Future<Post.PostList> in
+                return post.author.get(on: req).map(to: Post.PostList.self) { author -> Post.PostList in
                     return try Post.PostList(id: post.requireID(), title: post.title, body: post.body, author: author.toPublicUser())
                 }
             }.flatten(on: req)
@@ -96,7 +96,7 @@ final class PostController: RouteCollection {
     
     func show(_ req: Request) throws -> Future<Post.PostList> {
         return try req.parameters.next(Post.self).flatMap(to: Post.PostList.self) { post -> Future<Post.PostList> in
-            return try post.author.get(on: req).map{ author -> Post.PostList in
+            return post.author.get(on: req).map{ author -> Post.PostList in
                 let publicUser = User.PublicUser(id: author.id!, username: author.username, email: author.email)
                 return Post.PostList(id: post.id!, title: post.title, body: post.body, author: publicUser)
             }

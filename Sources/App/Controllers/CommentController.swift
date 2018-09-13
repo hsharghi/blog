@@ -3,6 +3,7 @@ import Crypto
 import Authentication
 import Pagination
 import Fluent
+import FluentMySQL
 
 /// Controls basic CRUD operations on `User`s.
 final class CommentController: RouteCollection {
@@ -25,7 +26,16 @@ final class CommentController: RouteCollection {
     }
     
     func test(_ req: Request) throws -> Future<[Comment]> {
-        return try User.find(1, on: req).flatMap(to: [Comment].self) { user -> Future<[Comment]> in
+        let ids: [Int]  = []
+//
+//        return req.withPooledConnection(to: .mysql) { conn -> Future<[User]> in
+//            return conn.raw("""
+//               // enter raw query
+//            """).all(decoding: Comment.self)
+//        }
+
+      
+        return User.find(1, on: req).flatMap(to: [Comment].self) { user -> Future<[Comment]> in
             if let user = user  {
                 return try user.comments.query(on: req).all()
 //                            return try user.posts.query(on: req).all().map { posts -> Future<[Comment]> in
@@ -50,7 +60,7 @@ final class CommentController: RouteCollection {
         
         return try theUser.comments.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Comment.CommentList].self) { comments -> Future<[Comment.CommentList]> in
             return try comments.map { comment -> Future<Comment.CommentList> in
-                return try comment.post.get(on: req).map(to: Comment.CommentList.self) { post -> Comment.CommentList in
+                return comment.post.get(on: req).map(to: Comment.CommentList.self) { post -> Comment.CommentList in
                     return try Comment.CommentList(id: comment.requireID(), body: comment.body, onPost: post, commentator: theUser.toPublicUser(), date: comment.createdAt ?? Date())
                 }
                 }.flatten(on: req)
@@ -79,8 +89,8 @@ final class CommentController: RouteCollection {
     func getCommentsOnPost(_ req: Request) throws -> Future<[Comment.CommentList]> {
         return try req.parameters.next(Post.self).flatMap(to: [Comment.CommentList].self) { post -> Future<[Comment.CommentList]> in
             return try post.comments.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Comment.CommentList].self) { comments -> Future<[Comment.CommentList]> in
-                return try comments.map { comment -> Future<Comment.CommentList> in
-                    return try comment.commentator.get(on: req).map(to: Comment.CommentList.self) { commentator -> Comment.CommentList in
+                return comments.map { comment -> Future<Comment.CommentList> in
+                    return comment.commentator.get(on: req).map(to: Comment.CommentList.self) { commentator -> Comment.CommentList in
                         return try Comment.CommentList(id: comment.requireID(), body: comment.body, commentator: commentator.toPublicUser(), date: comment.createdAt ?? Date())
                     }
                     }.flatten(on: req)
@@ -104,7 +114,7 @@ final class CommentController: RouteCollection {
                 throw Abort(.badRequest, reason: "`postId` is required")
             }
 
-            return try Post.find(postId!, on: req).flatMap(to: Comment.self) { post in
+            return Post.find(postId!, on: req).flatMap(to: Comment.self) { post in
                 guard post != nil else {
                     throw Abort(.badRequest, reason: "The post you are trying to put a comment on, is not found!")
                 }

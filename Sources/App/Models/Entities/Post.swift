@@ -12,13 +12,8 @@ final class Post: MySQLModel {
     var updatedAt: Date?
     var userId: User.ID
 
-    static var createdAtKey: WritableKeyPath<Post, Date?> {
-        return \.createdAt
-    }
-    
-    static var updatedAtKey: WritableKeyPath<Post, Date?> {
-        return \.updatedAt
-    }
+    static var createdAtKey: TimestampKey? = \.createdAt
+    static var updatedAtKey: TimestampKey? = \.updatedAt
     
 
     /// Creates a new `Post`.
@@ -54,7 +49,7 @@ extension Post: Migration {
 //            try builder.field(for: \.createdAt)
 //            try builder.field(for: \.updatedAt)
 //            try builder.field(for: \.userId)
-            try builder.addReference(from: \.userId, to: \User.id)
+            builder.reference(from: \.userId, to: \User.id)
         }
     }
 }
@@ -64,8 +59,6 @@ extension Post: Content { }
 
 /// Allows `Post` to be used as a dynamic parameter in route definitions.
 extension Post: Parameter { }
-
-extension Post: Timestampable { }
 
 extension Post: Paginatable { }
 

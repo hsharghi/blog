@@ -14,13 +14,8 @@ final class Comment: MySQLModel {
     var createdAt: Date?
     var updatedAt: Date?
 
-    static var createdAtKey: WritableKeyPath<Comment, Date?> {
-        return \.createdAt
-    }
-    
-    static var updatedAtKey: WritableKeyPath<Comment, Date?> {
-        return \.updatedAt
-    }
+    static var createdAtKey: TimestampKey? = \.createdAt
+    static var updatedAtKey: TimestampKey? = \.updatedAt
     
 
     /// Creates a new `Comment`.
@@ -43,19 +38,18 @@ extension Comment: Migration {
             // auto create fields from model properties
             try addProperties(to: builder)
 
-            try builder.addReference(from: \.userId, to: \User.id)
-            try builder.addReference(from: \.postId, to: \Post.id)
+            builder.reference(from: \.userId, to: \User.id)
+            builder.reference(from: \.postId, to: \Post.id)
         }
     }
 }
+
 
 /// Allows `Comment` to be encoded to and decoded from HTTP messages.
 extension Comment: Content { }
 
 /// Allows `Comment` to be used as a dynamic parameter in route definitions.
 extension Comment: Parameter { }
-
-extension Comment: Timestampable { }
 
 extension Comment: Paginatable { }
 

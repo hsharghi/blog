@@ -43,7 +43,7 @@ final class UserController: RouteCollection {
     func create(_ req: Request) throws -> Future<User.AuthenticatedUser> {
         // sync decode and async save
         let user = try req.content.syncDecode(User.self)
-        return try User.query(on: req).filter(\.email == user.email).first().flatMap(to: User.AuthenticatedUser.self) { existingUser in
+        return User.query(on: req).filter(\.email == user.email).first().flatMap(to: User.AuthenticatedUser.self) { existingUser in
             guard existingUser == nil else {
                 throw Abort(.badRequest, reason: "User with this email address already exists")
             }
