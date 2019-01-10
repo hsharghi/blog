@@ -1,11 +1,12 @@
 import FluentMySQL
 import Vapor
 import Pagination
+import Fluent
 
 /// A single entry of a Todo list.
 final class Comment: MySQLModel {
 
-    static var entity = "comments"
+    static let entity = "comments"
     
     var id: Int?
     var userId: User.ID
@@ -24,8 +25,6 @@ final class Comment: MySQLModel {
         self.body = body
         self.userId = userId
         self.postId = postId
-        self.createdAt = Date()
-        self.updatedAt = Date()
     }
 }
 
@@ -43,7 +42,6 @@ extension Comment: Migration {
         }
     }
 }
-
 
 /// Allows `Comment` to be encoded to and decoded from HTTP messages.
 extension Comment: Content { }
