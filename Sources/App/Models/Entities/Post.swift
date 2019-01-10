@@ -1,9 +1,13 @@
 import FluentMySQL
 import Vapor
 import Pagination
+import Fluent
+import FluentSQL
 
 /// A single entry of a Todo list.
 final class Post: MySQLModel {
+
+    static let entity = "posts"
 
     var id: Int?
     var title: String
@@ -17,12 +21,13 @@ final class Post: MySQLModel {
     
 
     /// Creates a new `Post`.
-    init(id: Int? = nil, title: String, body: String, userId: User.ID, createdAt: Date = Date()) {
+    init(id: Int? = nil, title: String, body: String, userId: User.ID, createdAt: Date? = nil) {
         self.id = id
         self.title = title
         self.body = body
-        self.createdAt = createdAt
-        self.updatedAt = Date()
+        if let date = createdAt {
+            self.createdAt = date
+        }
         self.userId = userId
     }
     /*
