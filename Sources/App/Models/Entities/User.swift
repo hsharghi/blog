@@ -5,6 +5,9 @@ import Authentication
 
 /// A single entry of a Todo list.
 final class User: MySQLModel {
+    
+    static let entity = "users"
+
     /// The unique identifier for this `Todo`.
     var id: Int?
     
@@ -87,6 +90,12 @@ extension User {
         var id: Int
         var username: String?
         var email: String
+    }
+    
+    struct FullUser: Content {
+        var user: User.PublicUser
+        var posts: [Post]
+        var comments: [Comment]
     }
     
 }

@@ -44,21 +44,21 @@ final class UserController: RouteCollection {
     
 
     /// Returns users with posts and comments for each user
-    func fullUser(_ req: Request) throws -> Future<[User.Hamechi]> {        
-        return User.query(on: req).range(..<5).all().flatMap { users -> Future<[User.Hamechi]> in
+    func fullUser(_ req: Request) throws -> Future<[User.FullUser]> {
+        return User.query(on: req).range(..<5).all().flatMap { users -> Future<[User.FullUser]> in
             let ids = users.map { $0.id! }
-            var hamechi = [User.Hamechi]()
+            var fullUsers = [User.FullUser]()
             let allPosts = Post.query(on: req).filter(\.userId ~~ ids).all()
             let allComments = Comment.query(on: req).filter(\.userId ~~ ids).all()
             
-            return map(to: [User.Hamechi].self, allPosts, allComments, { (posts, comments)  in
+            return map(to: [User.FullUser].self, allPosts, allComments, { (posts, comments)  in
                 users.forEach({ (user) in
                     let userPosts = posts.filter { $0.userId == user.id! }.prefix(2)
                     let userComments = comments.filter { $0.userId == user.id! }.prefix(2)
-                    let h = User.Hamechi(user: user.toPublicUser(), posts: Array(userPosts), comments: Array(userComments))
-                    hamechi.append(h)
+                    let h = User.FullUser(user: user.toPublicUser(), posts: Array(userPosts), comments: Array(userComments))
+                    fullUsers.append(h)
                 })
-                return hamechi
+                return fullUsers
             })
             
         }
