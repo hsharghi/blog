@@ -10,6 +10,9 @@ import FluentMySQL
 import Authentication
 
 final class Token: MySQLModel {
+    
+    static let entity = "tokens"
+    
     var id: Int?
     var token: String
     var userId: User.ID
