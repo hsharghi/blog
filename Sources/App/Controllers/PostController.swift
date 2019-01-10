@@ -20,8 +20,8 @@ final class PostController: RouteCollection {
         //        let posts = router.grouped("posts",[basicAuthMiddleware, guardAuthMiddleware])
         
         posts.get(use: index)
-        posts.post(use: create)
-        posts.patch(Post.parameter, use: update)
+        posts.post(Post.CreatePost.self, use: create)
+        posts.patch(Post.self, use: update)
         
         router.get("posts", Post.parameter, use: show)
         router.get("posts", "all", use: all)
@@ -105,7 +105,7 @@ final class PostController: RouteCollection {
     
     
     
-    func create(_ req: Request) throws -> Future<Post> {
+    func create(_ req: Request, post: Post.CreatePost) throws -> Future<Post> {
         // sync decode and async save
         
         let user = try req.authenticated(User.self)
@@ -113,36 +113,33 @@ final class PostController: RouteCollection {
         guard userId != nil else {
             throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
-        let postData = try req.content.syncDecode(Post.CreatePost.self)
-        let post = Post(title: postData.title, body: postData.body, userId: userId!)
+//        let postData = try req.content.syncDecode(Post.CreatePost.self)
+        let post = Post(title: post.title, body: post.body, userId: userId!)
         
         return post.save(on: req)
         
     }
     
     
-    func update(_ req: Request) throws -> Future<Post> {
+    func update(_ req: Request, post: Post) throws -> Future<Post> {
         let user = try req.authenticated(User.self)
         let userId = user?.id
         guard userId != nil else {
             throw Abort(.forbidden, reason: "Couldn't get the authenticated user!")
         }
         
-        let post = try req.parameters.next(Post.self).map { post throws -> Post in
-            guard post.userId == userId else {
-                throw Abort(.forbidden, reason: "The post you are trying to update, is not yours!")
-            }
-            return post
+        guard post.userId == userId else {
+            throw Abort(.forbidden, reason: "The post you are trying to update, is not yours!")
         }
         
         let newValues = try req.content.decode(Post.UpdatablePost.self)
         
-        return flatMap(to: Post.self, post, newValues, { (post, newValues) in
+        return newValues.flatMap { (newValues) in
             post.title = newValues.title ?? post.title
             post.body = newValues.body ?? post.body
             
             return post.update(on: req)
-        })
+        }
     }
     
     
