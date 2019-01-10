@@ -55,13 +55,11 @@ final class CommentController: RouteCollection {
         let user = try req.authenticated(User.self)
         guard user != nil else {
             throw Abort(.unauthorized, reason: "You need to login to see comments")
-        }
-        let theUser = user!
-        
-        return try theUser.comments.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Comment.CommentList].self) { comments -> Future<[Comment.CommentList]> in
-            return try comments.map { comment -> Future<Comment.CommentList> in
+        }        
+        return try user!.comments.query(on: req).sort(\.createdAt, .descending).all().flatMap(to: [Comment.CommentList].self) { comments -> Future<[Comment.CommentList]> in
+            return comments.map { comment -> Future<Comment.CommentList> in
                 return comment.post.get(on: req).map(to: Comment.CommentList.self) { post -> Comment.CommentList in
-                    return try Comment.CommentList(id: comment.requireID(), body: comment.body, onPost: post, commentator: theUser.toPublicUser(), date: comment.createdAt ?? Date())
+                    return try Comment.CommentList(id: comment.requireID(), body: comment.body, onPost: post, commentator: user!.toPublicUser(), date: comment.createdAt ?? Date())
                 }
                 }.flatten(on: req)
         }
