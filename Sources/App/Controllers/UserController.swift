@@ -1,6 +1,8 @@
 import Vapor
 import Crypto
 import Authentication
+import FluentMySQL
+import Fluent
 
 /// Controls basic CRUD operations on `User`s.
 final class UserController: RouteCollection {
@@ -10,17 +12,17 @@ final class UserController: RouteCollection {
 
         users.post("login", use: login)
 
+        users.get("full", use: fullUser)
         users.get(use: index)
         users.get(User.parameter, use: show)
         users.post(use: create)
         users.patch(User.parameter, use: update)
         users.delete(User.parameter, use: delete)
-
         // good way to get update paramters
 //        users.patch(UserContent.self, at: User.parameter, use: update)
     }
 
-    func login(_ req: Request) throws -> Future<User.PublicUser> {
+    func login(_ req: Request) throws -> Future<User.AuthenticatedUser> {
         let user = try req.content.decode(User.AuthenticatableUser.self).flatMap { (user) -> Future<User> in
             let passwordVerifier = try req.make(BCryptDigest.self)
             return User.authenticate(username: user.email,
@@ -28,7 +30,7 @@ final class UserController: RouteCollection {
                     using: passwordVerifier,
                     on: req).unwrap(or: Abort.init(HTTPResponseStatus.unauthorized))
         }
-        return user.toPublicUser()
+        return user.toAuthenticatedUser(on: req)
     }
 
     func index(_ req: Request) throws -> Future<[User.PublicUser]> {
@@ -39,6 +41,29 @@ final class UserController: RouteCollection {
     func show(_ req: Request) throws -> Future<User.PublicUser> {
         return try req.parameters.next(User.self).toPublicUser()
     }
+    
+
+    /// Returns users with posts and comments for each user
+    func fullUser(_ req: Request) throws -> Future<[User.Hamechi]> {        
+        return User.query(on: req).range(..<5).all().flatMap { users -> Future<[User.Hamechi]> in
+            let ids = users.map { $0.id! }
+            var hamechi = [User.Hamechi]()
+            let allPosts = Post.query(on: req).filter(\.userId ~~ ids).all()
+            let allComments = Comment.query(on: req).filter(\.userId ~~ ids).all()
+            
+            return map(to: [User.Hamechi].self, allPosts, allComments, { (posts, comments)  in
+                users.forEach({ (user) in
+                    let userPosts = posts.filter { $0.userId == user.id! }.prefix(2)
+                    let userComments = comments.filter { $0.userId == user.id! }.prefix(2)
+                    let h = User.Hamechi(user: user.toPublicUser(), posts: Array(userPosts), comments: Array(userComments))
+                    hamechi.append(h)
+                })
+                return hamechi
+            })
+            
+        }
+    }
+    
 
     func create(_ req: Request) throws -> Future<User.AuthenticatedUser> {
         // sync decode and async save
